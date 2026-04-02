@@ -1,5 +1,5 @@
 ---
-description: Show overview of all Railyard platform entities — agents, tools, governors, workflows, credentials, documents, memories
+description: Show overview of all Railyard platform entities — agents, tools, governors, workflows, credentials, documents, memories, chat sessions, knowledge bases, integrations, inbound sources, LLM models
 allowed-tools: [Bash, Read]
 ---
 
@@ -53,6 +53,26 @@ DOCS=$(curl -s "${RAILYARD_URL}/api/v1/documents?limit=50" \
 # Memories
 MEMORIES=$(curl -s "${RAILYARD_URL}/api/v1/memories/stats" \
   -H "Authorization: Bearer ${TOKEN}")
+
+# Chat Sessions
+CHATS=$(curl -s "${RAILYARD_URL}/api/v1/chat/sessions" \
+  -H "Authorization: Bearer ${TOKEN}")
+
+# Knowledge Bases
+KBS=$(curl -s "${RAILYARD_URL}/api/v1/knowledge-bases?limit=50" \
+  -H "Authorization: Bearer ${TOKEN}")
+
+# Integrations
+INTEGRATIONS=$(curl -s "${RAILYARD_URL}/api/v1/integrations" \
+  -H "Authorization: Bearer ${TOKEN}")
+
+# Inbound Sources
+INBOUND=$(curl -s "${RAILYARD_URL}/api/v1/inbound-sources?limit=50" \
+  -H "Authorization: Bearer ${TOKEN}")
+
+# LLM Models
+MODELS=$(curl -s "${RAILYARD_URL}/api/v1/llm-models?limit=50" \
+  -H "Authorization: Bearer ${TOKEN}")
 ```
 
 ## Output Format
@@ -70,6 +90,11 @@ MEMORIES=$(curl -s "${RAILYARD_URL}/api/v1/memories/stats" \
 | Credentials | N |
 | Documents | N |
 | Memories | N |
+| Chat Sessions | N |
+| Knowledge Bases | N |
+| Integrations | N (M connected) |
+| Inbound Sources | N (M active) |
+| LLM Models | N |
 
 ## Agents
 | Name | Module | Status | Tools | Success Rate |
@@ -107,4 +132,29 @@ MEMORIES=$(curl -s "${RAILYARD_URL}/api/v1/memories/stats" \
 |------|-------|----------------|
 | fact | 15 | 0.7 |
 | experience | 8 | 0.5 |
+
+## Chat Sessions
+| Title | Agent | Status | Last Message |
+|-------|-------|--------|-------------|
+| CVE Discussion | cve-analyst | active | 5m ago |
+
+## Knowledge Bases
+| Name | Visibility | Tags | Documents |
+|------|-----------|------|-----------|
+| sop-kb | private | [ops] | 12 |
+
+## Integrations
+| Name | Type | Status | Enabled |
+|------|------|--------|---------|
+| ServiceNow | servicenow | connected | yes |
+
+## Inbound Sources
+| Name | Type | Status | Requests |
+|------|------|--------|----------|
+| snow-poller | http_poll | active | 47 |
+
+## LLM Models
+| Name | Provider | Model ID | Default | Active |
+|------|----------|----------|---------|--------|
+| GPT-4o | openai | gpt-4o | yes | yes |
 ```

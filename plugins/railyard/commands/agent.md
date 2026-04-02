@@ -1,6 +1,6 @@
 ---
 description: Create and configure DSPy agents with tool and governor associations, demonstrations, and execution verification
-argument-hint: [create|list] [--module predict|chain_of_thought|react|multi_chain_comparison|refine|parallel]
+argument-hint: [create|list] [--module predict|chain_of_thought|react|multi_chain_comparison|refine|parallel|rlm]
 allowed-tools: [Bash, Read, AskUserQuestion, Task]
 ---
 
@@ -46,6 +46,7 @@ Interview:
    - multi_chain_comparison — Generate multiple answers, pick best
    - refine — Iterative refinement
    - parallel — Run multiple approaches in parallel
+   - rlm — Recursive Language Model (for large context processing)
 
 4. **"Which LLM model?"** (optional — default uses platform default)
 

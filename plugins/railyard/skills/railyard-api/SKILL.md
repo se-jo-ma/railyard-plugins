@@ -1,6 +1,6 @@
 ---
 name: railyard-api
-description: This skill should be used when any railyard builder agent needs to know API endpoints, request/response schemas, field types, enum values, or sub-resource relationships for agents, tools, governors, workflows, credentials, documents, knowledge graph, or memories. Embedded API reference for all Railyard domains.
+description: This skill should be used when any railyard builder agent needs to know API endpoints, request/response schemas, field types, enum values, or sub-resource relationships for agents, tools, governors, workflows, credentials, documents, knowledge graph, memories, chat sessions, knowledge bases, integrations, inbound sources, LLM models, traces, or export/import. Embedded API reference for all Railyard domains.
 version: 1.0.0
 user-invocable: false
 ---
@@ -64,7 +64,7 @@ Embedded API knowledge for builder agents. Base URL and auth handled by smart-ra
 ```json
 {
   "name": "string (required)",
-  "dspy_module": "predict|chain_of_thought|react|multi_chain_comparison|refine|parallel (required)",
+  "dspy_module": "predict|chain_of_thought|react|multi_chain_comparison|refine|parallel|rlm (required)",
   "system_prompt": "string (optional)",
   "model": "string (optional)",
   "temperature": 0.7,
@@ -108,6 +108,13 @@ Embedded API knowledge for builder agents. Base URL and auth handled by smart-ra
 | DELETE | /api/v1/agents/{id}/demonstrations/{demoId} | Delete demo |
 | GET | /api/v1/agents/{id}/sessions | List sessions |
 | GET | /api/v1/agents/{id}/trace | List traces |
+| GET | /api/v1/agents/{id}/monitor | WebSocket monitoring |
+| GET | /api/v1/agents/{id}/memory-sources | List memory sources |
+| POST | /api/v1/agents/{id}/memory-sources | Configure memory source |
+| GET | /api/v1/agents/{id}/credentials | List credential assignments |
+| POST | /api/v1/agents/{id}/credentials | Assign credential |
+| GET | /api/v1/agents/{id}/knowledge-bases | List associated KBs |
+| POST | /api/v1/agents/{id}/mcp | MCP integration |
 
 **Create demo:**
 ```json
@@ -178,6 +185,9 @@ Embedded API knowledge for builder agents. Base URL and auth handled by smart-ra
 | GET | /api/v1/governors/{id}/status | Runtime status |
 | POST | /api/v1/governors/{id}/test | One-shot test |
 | GET | /api/v1/governors/{id}/trace | Trace entries |
+| POST | /api/v1/governors/{id}/validate | Validate rules syntax |
+| GET | /api/v1/governors/{id}/monitor | WebSocket monitoring |
+| GET | /api/v1/governors/{id}/ws | Governor WebSocket connection |
 
 **Create governor:**
 ```json
@@ -292,7 +302,7 @@ Embedded API knowledge for builder agents. Base URL and auth handled by smart-ra
 | GET | /api/v1/workflows/{id} | Get workflow |
 | PUT | /api/v1/workflows/{id} | Update (partial) |
 | DELETE | /api/v1/workflows/{id} | Delete workflow |
-| POST | /api/v1/workflows/{id}/duplicate | Deep-copy |
+| POST | /api/v1/workflows/{id}/duplicate | Deep-copy workflow |
 | POST | /api/v1/workflows/{id}/execute | Execute |
 | GET | /api/v1/workflows/{id}/executions | List executions |
 
@@ -379,6 +389,9 @@ Embedded API knowledge for builder agents. Base URL and auth handled by smart-ra
 | POST | /api/v1/executions/{id}/retry | Retry failed |
 | GET | /api/v1/executions/{id}/trace | Execution traces |
 | GET | /api/v1/executions/{id}/stages | Stage executions |
+| GET | /api/v1/executions/{id}/steps | Step executions |
+| POST | /api/v1/executions/{id}/retry-stage | Retry specific stage |
+| GET | /api/v1/executions/{id}/monitor | WebSocket monitoring |
 
 ## Routing Rules
 
@@ -580,3 +593,306 @@ Embedded API knowledge for builder agents. Base URL and auth handled by smart-ra
 | PUT | /api/v1/embeddings/models/{id} | Update model |
 | DELETE | /api/v1/embeddings/models/{id} | Delete model |
 | POST | /api/v1/embeddings/models/{id}/set-default | Set default |
+
+## Chat Sessions
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/v1/chat/sessions | List sessions |
+| POST | /api/v1/chat/sessions | Create session |
+| GET | /api/v1/chat/sessions/{id} | Get session |
+| PATCH | /api/v1/chat/sessions/{id} | Update (title) |
+| DELETE | /api/v1/chat/sessions/{id} | Archive session |
+| GET | /api/v1/chat/sessions/{id}/messages | List messages. Query: `after_sequence`, `limit` |
+
+**Create session:**
+```json
+{
+  "agent_id": "uuid (optional — connect to agent)"
+}
+```
+
+**Update session:**
+```json
+{
+  "title": "string"
+}
+```
+
+**Chat message (in response):**
+```json
+{
+  "id": "uuid",
+  "session_id": "uuid",
+  "role": "user|assistant|system|narration|tool",
+  "content": "string",
+  "metadata": {},
+  "sequence": 1,
+  "created_at": "timestamp"
+}
+```
+
+### WebSocket
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/v1/ws/chat/{sessionId}?token=JWT | Real-time chat WebSocket |
+
+**WebSocket event:**
+```json
+{
+  "type": "message|stream_token|narration|approval_request|approval_response|error",
+  "session_id": "uuid",
+  "message_id": "uuid",
+  "role": "string",
+  "content": "string",
+  "metadata": {},
+  "sequence": 1,
+  "done": false,
+  "timestamp": "timestamp"
+}
+```
+
+## Knowledge Bases
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/v1/knowledge-bases | List (paginated) |
+| POST | /api/v1/knowledge-bases | Create knowledge base |
+| GET | /api/v1/knowledge-bases/{id} | Get knowledge base |
+| PUT | /api/v1/knowledge-bases/{id} | Update knowledge base |
+| DELETE | /api/v1/knowledge-bases/{id} | Delete knowledge base |
+| GET | /api/v1/knowledge-bases/{id}/acls | List ACLs |
+| POST | /api/v1/knowledge-bases/{id}/acls | Create ACL |
+| DELETE | /api/v1/knowledge-bases/{id}/acls/{aclId} | Delete ACL |
+| POST | /api/v1/knowledge-bases/{id}/tags | Assign tag: `{"tag_id":"uuid"}` |
+| DELETE | /api/v1/knowledge-bases/{id}/tags/{tagId} | Unassign tag |
+
+**Create knowledge base:**
+```json
+{
+  "name": "string (required)",
+  "description": "string (optional)",
+  "parent_kb_id": "uuid (optional — for hierarchical KBs)",
+  "visibility": "private|shared (optional, default: private)"
+}
+```
+
+**Update knowledge base:**
+```json
+{
+  "name": "string (required)",
+  "description": "string (optional)",
+  "parent_kb_id": "uuid (optional)",
+  "visibility": "string (optional)",
+  "metadata": {}
+}
+```
+
+**Create ACL:**
+```json
+{
+  "grantee_user_id": "uuid (optional)",
+  "grantee_group_id": "uuid (optional)",
+  "permission": "string (required)"
+}
+```
+
+### KB Tags
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/v1/kb-tags | List all tags |
+| POST | /api/v1/kb-tags | Create tag |
+| DELETE | /api/v1/kb-tags/{id} | Delete tag |
+
+**Create tag:**
+```json
+{
+  "name": "string (required)",
+  "description": "string (optional)",
+  "color": "#hex (optional)"
+}
+```
+
+## Integrations
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/v1/integrations | List all integrations |
+| GET | /api/v1/integrations/{type} | Get integration by adapter type |
+| PUT | /api/v1/integrations/{type} | Update settings/enable |
+| POST | /api/v1/integrations/{type}/test | Test connection |
+| GET | /api/v1/integrations/{type}/actions | List available actions |
+| POST | /api/v1/integrations/{type}/actions/{action} | Execute action |
+
+**Update integration:**
+```json
+{
+  "settings": {},
+  "credential_id": "uuid (optional)",
+  "enabled": true
+}
+```
+
+**Test connection:**
+```json
+{
+  "settings": {},
+  "credential_id": "uuid (optional)"
+}
+```
+
+**Execute action:**
+```json
+{
+  "integration_id": "uuid (required)",
+  "input": {}
+}
+```
+
+**Integration (response):**
+```json
+{
+  "id": "uuid",
+  "name": "string",
+  "adapter_type": "string",
+  "status": "connected|disconnected|error",
+  "settings": {},
+  "settings_schema": {},
+  "ui_schema": {},
+  "credential_id": "uuid",
+  "has_credential": true,
+  "enabled": true,
+  "error_message": "string"
+}
+```
+
+## Inbound Sources
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/v1/inbound-sources | List (paginated) |
+| POST | /api/v1/inbound-sources | Create source |
+| GET | /api/v1/inbound-sources/{id} | Get source |
+| PUT | /api/v1/inbound-sources/{id} | Update source |
+| DELETE | /api/v1/inbound-sources/{id} | Delete source |
+| POST | /api/v1/inbound-sources/{id}/activate | Activate source |
+| POST | /api/v1/inbound-sources/{id}/pause | Pause source |
+| POST | /api/v1/inbound-sources/{id}/test | Test connection |
+
+**Create inbound source:**
+```json
+{
+  "name": "string (required)",
+  "description": "string (optional)",
+  "source_type": "manual|http_poll|email|webhook (required)",
+  "status": "active|paused|error|disabled (optional, default: disabled)",
+  "poll_url": "string (for http_poll)",
+  "poll_interval_seconds": 300,
+  "poll_method": "GET|POST (optional)",
+  "poll_headers": {},
+  "webhook_path": "string (for webhook)",
+  "webhook_secret": "string (optional)",
+  "email_address": "string (for email)",
+  "email_protocol": "IMAP|POP3 (optional)",
+  "email_server": "string (optional)",
+  "email_port": 993,
+  "field_mapping": {},
+  "request_type_id": "uuid (optional)",
+  "default_priority": "low|medium|high|critical (default: medium)",
+  "default_title_template": "string (optional)",
+  "credential_id": "uuid (optional)"
+}
+```
+
+## LLM Models
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/v1/llm-models | List (paginated) |
+| POST | /api/v1/llm-models | Create model |
+| GET | /api/v1/llm-models/{id} | Get model |
+| PUT | /api/v1/llm-models/{id} | Update model |
+| DELETE | /api/v1/llm-models/{id} | Delete model |
+| POST | /api/v1/llm-models/{id}/set-default | Set as platform default |
+
+**Create LLM model:**
+```json
+{
+  "name": "string (required)",
+  "provider": "string (required — e.g. openai, anthropic, ollama)",
+  "model_id": "string (required — provider model ID)",
+  "base_url": "string (optional — custom endpoint)",
+  "max_tokens": 4096,
+  "default_temperature": 0.7,
+  "supports_tools": true,
+  "supports_vision": false,
+  "credential_id": "uuid (optional)",
+  "is_default": false,
+  "is_active": true,
+  "config": {}
+}
+```
+
+## Export/Import
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | /api/v1/export | Export entity bundle |
+| POST | /api/v1/import | Import bundle (multipart). Query: `?dry_run=true` |
+
+**Export request:**
+```json
+{
+  "entity_type": "agent|tool|governor|workflow (required)",
+  "entity_id": "uuid (required)",
+  "scope": "entity|dependencies|environment (required)"
+}
+```
+
+**Export response (bundle):**
+```json
+{
+  "version": 1,
+  "exported_at": "timestamp",
+  "platform": "string",
+  "scope": "string",
+  "root_entity": {"type": "string", "id": "uuid", "name": "string"},
+  "entities": {
+    "credentials": [],
+    "tools": [],
+    "agents": [],
+    "governors": [],
+    "workflows": []
+  }
+}
+```
+
+**Import:** Multipart form with `bundle` file field. Returns:
+```json
+{
+  "created": {
+    "credentials": 0,
+    "tools": 0,
+    "agents": 0,
+    "governors": 0,
+    "workflows": 0
+  },
+  "credential_placeholders": ["name1", "name2"]
+}
+```
+
+## Traces
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/v1/traces | List traces. Required: `?entity_type=X&entity_id=Y` |
+| GET | /api/v1/traces/{traceId}/tree | Get span tree |
+| GET | /api/v1/traces/{traceId}/spans/{spanId} | Get span detail |
+
+### WebSocket
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/v1/ws/traces/monitor | Real-time trace monitoring |
